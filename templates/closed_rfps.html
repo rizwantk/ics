@@ -1,0 +1,1881 @@
+{% extends "layout.html" %}
+
+{% block title %}Closed RFPs{% endblock %}
+
+{% block content %}
+<!-- Main Content -->
+<div class="container-fluid mt-4">
+    <!-- Navigation Cards (existing code remains same) -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <a href="{{ url_for('landing') }}" class="nav-card">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <i class="fas fa-home"></i>
+                        <h5>Dashboard</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-4">
+            <a href="{{ url_for('open_rfps') }}" class="nav-card">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <i class="fas fa-folder-open"></i>
+                        <h5>Open RFPs</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-4">
+            <a href="{{ url_for('closed_rfps') }}" class="nav-card active">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <i class="fas fa-archive"></i>
+                        <h5>Closed RFPs</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="custom-alert alert-{{ category }} alert-dismissible fade show" role="alert" style="z-index: 1050;">
+                    <div class="alert-header">
+                        <i class="fas fa-info-circle"></i>
+                        <h4>{{ message }}</h4>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    <div class="filter-tags">
+                        {% if selected_countries %}
+                            <span class="filter-tag">
+                                <i class="fas fa-globe"></i>
+                                Countries: {{ selected_countries|join(', ') }}
+                            </span>
+                        {% endif %}
+                        
+                        {% if selected_activities %}
+                            <span class="filter-tag">
+                                <i class="fas fa-tasks"></i>
+                                Types: {{ selected_activities|join(', ') }}
+                            </span>
+                        {% endif %}
+                        
+                        {% if selected_contract_duration %}
+                            <span class="filter-tag">
+                                <i class="fas fa-clock"></i>
+                                Durations: {{ selected_contract_duration|join(', ') }}
+                            </span>
+                        {% endif %}
+                        
+                        {% if selected_awarded_range %}
+                            {% set awarded_range_labels = {
+                                'all': 'All',
+                                '3_months': 'Last 3 Months',
+                                '6_months': 'Last 6 Months',
+                                '1_year': 'Last 1 Year',
+                                '2_years': 'Last 2 Years'
+                            } %}
+                            <span class="filter-tag">
+                                <i class="fas fa-hourglass-half"></i>
+                                Awarded: {{ awarded_range_labels[selected_awarded_range] }}
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    <!-- Filter Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary filter-nav">
+        <div class="container-fluid">
+            <form method="GET" action="{{ url_for('closed_rfps') }}" class="d-flex flex-wrap align-items-center gap-2 w-100">
+                <!-- Country Filter -->
+                <div class="filter-group flex-grow-1">
+                    <label class="form-label">Country</label>
+                    <div class="dropdown">
+                        <button class="form-select text-start dropdown-toggle" type="button" 
+                                data-bs-toggle="dropdown" aria-expanded="false"
+                                id="countryDropdownButton">
+                            {% if selected_countries %}
+                                {{ selected_countries|length }} selected
+                            {% else %}
+                                All Countries
+                            {% endif %}
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-scrollable">
+                            <li>
+                                <div class="form-check dropdown-item">
+                                    <input type="checkbox" class="form-check-input country-checkbox" 
+                                           name="country" value="KSA"
+                                           id="countryKSA"
+                                           {% if 'KSA' in selected_countries %}checked{% endif %}>
+                                    <label class="form-check-label w-100" for="countryKSA">
+                                        KSA
+                                    </label>
+                                </div>
+                            </li>
+                            <li>
+                                <div class="form-check dropdown-item">
+                                    <input type="checkbox" class="form-check-input country-checkbox" 
+                                           name="country" value="Other"
+                                           id="countryOther"
+                                           {% if 'Other' in selected_countries %}checked{% endif %}>
+                                    <label class="form-check-label w-100" for="countryOther">
+                                        Other
+                                    </label>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Tender Type Filter -->
+                <div class="filter-group flex-grow-1">
+                    <label class="form-label">Tender Type</label>
+                    <div class="dropdown">
+                        <button class="form-select text-start dropdown-toggle" type="button" 
+                                data-bs-toggle="dropdown" aria-expanded="false"
+                                id="activityDropdownButton">
+                            {% if selected_activities %}
+                                {{ selected_activities|length }} selected
+                            {% else %}
+                                All Types
+                            {% endif %}
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-scrollable">
+                            {% for activity in distinct_activities %}
+                            <li>
+                                <div class="form-check dropdown-item">
+                                    <input type="checkbox" class="form-check-input activity-checkbox" 
+                                           name="competition_activity" value="{{ activity.competition_activity }}"
+                                           id="activity{{ loop.index }}"
+                                           {% if activity.competition_activity in selected_activities %}checked{% endif %}>
+                                    <label class="form-check-label w-100" for="activity{{ loop.index }}">
+                                        {{ activity.competition_activity }}
+                                    </label>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Contract Duration Filter -->
+                <div class="filter-group flex-grow-1">
+                    <label class="form-label">Contract Duration</label>
+                    <div class="dropdown">
+                        <button class="form-select text-start dropdown-toggle" type="button" 
+                                data-bs-toggle="dropdown" aria-expanded="false"
+                                id="durationDropdownButton">
+                            {% if selected_contract_duration %}
+                                {{ selected_contract_duration|length }} selected
+                            {% else %}
+                                Select Duration
+                            {% endif %}
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-scrollable">
+                            {% set duration_options = [
+                                ('less_than_3_months', 'Less than 3 months'),
+                                ('less_than_6_months', 'Less than 6 months'),
+                                ('less_than_1_year', 'Less than 1 year'),
+                                ('less_than_2_years', 'Less than 2 years'),
+                                ('above_2_years', 'Above 2 years')
+                            ] %}
+                            {% for value, label in duration_options %}
+                            <li>
+                                <div class="form-check dropdown-item">
+                                    <input type="checkbox" class="form-check-input duration-checkbox" 
+                                           name="contract_duration" value="{{ value }}"
+                                           id="duration{{ loop.index }}"
+                                           {% if value in selected_contract_duration %}checked{% endif %}>
+                                    <label class="form-check-label w-100" for="duration{{ loop.index }}">
+                                        {{ label }}
+                                    </label>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Awarded Date Range Filter -->
+                <div class="filter-group flex-grow-1">
+                    <label class="form-label">Awarded Date Range</label>
+                    <select class="form-select" name="awarded_date_range">
+                        <option value="all" {% if selected_awarded_range == 'all' %}selected{% endif %}>All</option>
+                        <option value="3_months" {% if selected_awarded_range == '3_months' %}selected{% endif %}>Last 3 Months</option>
+                        <option value="6_months" {% if selected_awarded_range == '6_months' %}selected{% endif %}>Last 6 Months</option>
+                        <option value="1_year" {% if selected_awarded_range == '1_year' %}selected{% endif %}>Last 1 Year</option>
+                        <option value="2_years" {% if selected_awarded_range == '2_years' %}selected{% endif %}>Last 2 Years</option>
+                    </select>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-flex gap-2 align-items-end">
+                    <button type="submit" class="btn btn-filter">
+                        <i class="fas fa-sync"></i> Apply Filters
+                    </button>
+                    <a href="{{ url_for('closed_rfps') }}" class="btn btn-clear">
+                        <i class="fas fa-times"></i> Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+    </nav>
+    
+    
+                    
+    <!-- RFPs Table -->
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">
+                Closed RFPs
+                <span class="count-badge">
+                    <span id="filteredCount">{{ filtered_closed_count }}</span>/
+                    <span id="totalCount">{{ total_closed_count }}</span>
+                </span>
+            </h4>
+            <div class="d-flex gap-2">
+                <form method="GET" class="search-form">
+                    <div class="input-group">
+                        <input type="text" name="closed_search" value="{{ closed_search_query }}" class="form-control mr-2 search-input" placeholder="Search closed RFPs...">
+                        <button class="btn btn-primary search-button" type="submit">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </form>
+                <a href="{{ url_for('download_closed_rfps', competition_activity=selected_activities, contract_duration=selected_contract_duration, awarded_date_range=selected_awarded_range) }}"
+                   class="btn btn-success download-btn ml-2">
+                    <i class="fas fa-download"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="sorting-panel mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <span class="sorting-label">Sort by:</span>
+            <div class="dropdown">
+                <button class="btn btn-sorting dropdown-toggle" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    {% if sort_field == 'Deadlines' %}
+                        Deadline
+                    {% elif sort_field == 'tender_cost' %}
+                        Tender Cost
+                    {% elif sort_field == 'issue_date' %}
+                        Issue Date
+                    {% elif sort_field == 'free_first' %}
+                        Free First
+                    {% else %}
+                        Select Sorting
+                    {% endif %}
+                    <i class="fas fa-chevron-down ms-2"></i>
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="sortDropdown">
+                    <!-- Deadline Sorting -->
+                    <li>
+                        <a class="dropdown-item {% if sort_field == 'Deadlines' and sort_order == 'asc' %}active{% endif %}" 
+                        href="?sort=Deadlines&order=asc">
+                            <i class="fas fa-arrow-up-a-z me-2"></i>Deadline (Oldest First)
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item {% if sort_field == 'Deadlines' and sort_order == 'desc' %}active{% endif %}" 
+                        href="?sort=Deadlines&order=desc">
+                            <i class="fas fa-arrow-down-a-z me-2"></i>Deadline (Newest First)
+                        </a>
+                    </li>
+
+                    <!-- Tender Cost Sorting -->
+                    <li>
+                        <a class="dropdown-item {% if sort_field == 'tender_cost' and sort_order == 'asc' %}active{% endif %}" 
+                        href="?sort=tender_cost&order=asc">
+                            <i class="fas fa-arrow-up-wide-short me-2"></i>Tender Cost (Low to High)
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item {% if sort_field == 'tender_cost' and sort_order == 'desc' %}active{% endif %}" 
+                        href="?sort=tender_cost&order=desc">
+                            <i class="fas fa-arrow-down-wide-short me-2"></i>Tender Cost (High to Low)
+                        </a>
+                    </li>
+
+                    <!-- Issue Date Sorting -->
+                    <li>
+                        <a class="dropdown-item {% if sort_field == 'issue_date' and sort_order == 'asc' %}active{% endif %}" 
+                        href="?sort=issue_date&order=asc">
+                            <i class="fas fa-arrow-up-a-z me-2"></i>Issue Date (Oldest First)
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item {% if sort_field == 'issue_date' and sort_order == 'desc' %}active{% endif %}" 
+                        href="?sort=issue_date&order=desc">
+                            <i class="fas fa-arrow-down-a-z me-2"></i>Issue Date (Newest First)
+                        </a>
+                    </li>
+
+                    <!-- Free First Sorting -->
+                    <li>
+                        <a class="dropdown-item {% if sort_field == 'free_first' %}active{% endif %}" 
+                        href="?sort=free_first">
+                            <i class="fas fa-coins me-2"></i>Free First
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="modern-table">
+                    <thead class="sticky-top">
+                    <thead>
+                        <tr>
+                            <th>RFP#</th>
+                            <th>SCOPE</th>
+                            <th>CLIENT</th>
+                            <th>TENDER COST</th>
+                            <th>PARTICIPATING FIRMS</th>
+                            <th>AWARDED TO</th>
+                            <th>AWARDED DATE</th>
+                            <th>CONTRACT PERIOD</th>
+                            <th>DEADLINE</th>
+                            <th>POTENTIAL NEXT RFP</th>
+                            <th>COUNTRY</th>
+                            <th>VISIT WEBSITE</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tender in closed_tenders %}
+                            {% if tender.rfp %}  {# Check if RFP# is not empty #}
+                            <tr>
+                                <td>{{ tender.rfp }}</td>
+                                <td>{{ tender.scope }}</td>
+                                <td>{{ tender.client }}</td>
+                                <td>{{ tender.tender_cost }}</td>
+                                <td>{{ tender.participating_firms }}</td>
+                                <td>{{ tender.awarded_to }}</td>
+                                <td>{{ tender.awarded_date }}</td>
+                                <td>{{ tender.contract_period }}</td>
+                                <td>{{ tender.Deadlines[:10] if tender.Deadlines else 'N/A' }}</td>
+                                <td><strong>{{ tender.potential_next_rfp }}</strong></td>
+                                <td>{{ tender.country }}</td>
+                                <td>
+                                    {% if tender.visitor_details_url and tender.visitor_details_url != 'N/A' %}
+                                        <a href="{{ tender.visitor_details_url }}" target="_blank" class="btn-visit-website">
+                                            <i class="fas fa-external-link-alt"></i> Visit Website
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- closed RFP Pagination -->
+        <nav aria-label="closed RFP Pagination" id="closedRfpPagination">
+            <ul class="pagination">
+                <!-- First Page Button -->
+                <li class="page-item {% if current_page == 1 %}disabled{% endif %}">
+                    <a class="page-link" href="?page=1&closed_search={{ closed_search_query }}{% for activity in selected_activities %}&competition_activity={{ activity }}{% endfor %}{% for d in selected_contract_duration %}&contract_duration={{ d }}{% endfor %}{% for c in selected_countries %}&country={{ c }}{% endfor %}&awarded_date_range={{ selected_awarded_range }}&time_left={{ selected_time_left }}" aria-label="First">
+                        <span>« First</span>
+                    </a>
+                </li>
+        
+                <!-- Previous Page Button -->
+                <li class="page-item {% if current_page == 1 %}disabled{% endif %}">
+                    <a class="page-link" href="?page={{ current_page - 1 }}&closed_search={{ closed_search_query }}{% for activity in selected_activities %}&competition_activity={{ activity }}{% endfor %}{% for d in selected_contract_duration %}&contract_duration={{ d }}{% endfor %}{% for c in selected_countries %}&country={{ c }}{% endfor %}&awarded_date_range={{ selected_awarded_range }}&time_left={{ selected_time_left }}" aria-label="Previous">
+                        <span>&laquo; Prev</span>
+                    </a>
+                </li>
+        
+                <!-- Page Numbers (Show 5 Consecutive Pages) -->
+                {% set start_page = current_page - 2 if current_page - 2 > 0 else 1 %}
+                {% set end_page = start_page + 4 if start_page + 4 <= closed_total_pages else closed_total_pages %}
+                {% set start_page = end_page - 4 if end_page - 4 > 0 else 1 %}
+        
+                {% for page_num in range(start_page, end_page + 1) %}
+                    <li class="page-item {% if page_num == current_page %}active{% endif %}">
+                        <a class="page-link" href="?page={{ page_num }}&closed_search={{ closed_search_query }}{% for activity in selected_activities %}&competition_activity={{ activity }}{% endfor %}{% for d in selected_contract_duration %}&contract_duration={{ d }}{% endfor %}{% for c in selected_countries %}&country={{ c }}{% endfor %}&awarded_date_range={{ selected_awarded_range }}&time_left={{ selected_time_left }}">
+                            {{ page_num }}
+                        </a>
+                    </li>
+                {% endfor %}
+        
+                <!-- Next Page Button -->
+                <li class="page-item {% if current_page == closed_total_pages %}disabled{% endif %}">
+                    <a class="page-link" href="?page={{ current_page + 1 }}&closed_search={{ closed_search_query }}{% for activity in selected_activities %}&competition_activity={{ activity }}{% endfor %}{% for d in selected_contract_duration %}&contract_duration={{ d }}{% endfor %}{% for c in selected_countries %}&country={{ c }}{% endfor %}&awarded_date_range={{ selected_awarded_range }}&time_left={{ selected_time_left }}" aria-label="Next">
+                        <span>Next &raquo;</span>
+                    </a>
+                </li>
+        
+                <!-- Last Page Button -->
+                <li class="page-item {% if current_page == closed_total_pages %}disabled{% endif %}">
+                    <a class="page-link" href="?page={{ closed_total_pages }}&closed_search={{ closed_search_query }}{% for activity in selected_activities %}&competition_activity={{ activity }}{% endfor %}{% for d in selected_contract_duration %}&contract_duration={{ d }}{% endfor %}{% for c in selected_countries %}&country={{ c }}{% endfor %}&awarded_date_range={{ selected_awarded_range }}&time_left={{ selected_time_left }}" aria-label="Last">
+                        <span>Last »</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        
+
+<!-- Required Scripts -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Bootstrap 5 -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+    .dropdown-menu {
+        z-index: 1060 !important; /* Higher than the flashed message */
+    }
+    /* Custom Styles */
+    .filter-nav {
+        background: linear-gradient(135deg, #6B46C1 0%, #4299E1 100%);
+        border-radius: 15px;
+        margin: 20px 0;
+        box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);
+        padding: 1.5rem;
+    }
+
+    .filter-group {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        padding: 1rem;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition: all 0.3s ease;
+    }
+
+    .filter-group:hover {
+        background: rgba(255, 255, 255, 0.25);
+    }
+
+    .filter-group label {
+        color: white;
+        font-weight: 600;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 0.75rem;
+        display: block;
+    }
+
+    .filter-nav .form-select,
+    .filter-nav .form-range {
+        background: rgba(255, 255, 255, 0.2);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .filter-nav .form-select:focus {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: white;
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+    }
+
+    .filter-nav .form-select option {
+        background: #6B46C1;
+        color: white;
+    }
+
+    /* Custom Range Slider */
+    .filter-nav .form-range::-webkit-slider-thumb {
+        background: #6B46C1;
+        border: 2px solid white;
+        box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+    }
+
+    /* Checkbox Styling */
+    .filter-nav .form-check-input:checked {
+        background-color: #6B46C1;
+        border-color: #6B46C1;
+    }
+
+    .filter-nav .form-check-input {
+        margin-top: 0.25em;
+    }
+
+    /* Dropdown Menu Styling */
+    .filter-nav .dropdown-menu {
+        background: linear-gradient(145deg, #6B46C1 0%, #4299E1 100%);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        max-height: 200px;
+        overflow-y: auto;
+        scrollbar-width: thin;  /* For Firefox */
+        border-radius: 8px;
+    }
+
+    .filter-nav .dropdown-menu::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .filter-nav .dropdown-item {
+        color: white !important;
+        transition: all 0.2s ease;
+        padding: 8px 16px;
+        border-radius: 6px;
+        margin: 2px 8px;
+        width: auto;
+    }
+
+    .filter-nav .dropdown-item:hover {
+        background: rgba(255, 255, 255, 0.1) !important;
+    }
+
+    /* Filter Buttons */
+    .btn-filter {
+        background: linear-gradient(135deg, #48BB78 0%, #38A169 100%);
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-filter:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(72, 187, 120, 0.3);
+        color: white;
+    }
+
+    .btn-clear {
+        background: linear-gradient(135deg, #F56565 0%, #E53E3E 100%);
+        color: white;
+        border: none;
+    }
+
+    /* Days Remaining Badge */
+    #daysValue {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 4px 12px;
+        border-radius: 20px;
+        display: inline-block;
+        text-align: center;
+        font-weight: 600;
+        min-width: 60px;
+    }
+
+    .nav-card .card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: none;
+    }
+
+    .nav-card:hover .card {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .nav-card.active .card {
+        background: linear-gradient(135deg, #3498db, #2980b9);
+        color: white;
+    }
+
+    .nav-card.active i {
+        color: white !important;
+    }
+
+    .count-badge {
+        background: rgba(255,255,255,0.2);
+        padding: 3px 10px;
+        border-radius: 15px;
+        font-size: 0.9rem;
+    }
+    .rfp-badge {
+        background: #e3f2fd;
+        color: #1976d2;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-weight: 500;
+    }
+
+    .duration-badge {
+        background: #e8f5e9;
+        color: #43a047;
+        padding: 4px 10px;
+        border-radius: 8px;
+    }
+
+    .btn-action {
+        background: linear-gradient(135deg, #3498db, #2980b9);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        transition: transform 0.2s ease;
+    }
+
+    .btn-action:hover {
+        transform: translateY(-2px);
+    }
+
+    .table-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    }
+
+    .search-form .input-group {
+        max-width: 300px;
+    }
+
+    .search-button {
+        margin-left: 5px;
+    }
+
+    .highlight {
+        background-color: yellow;
+        font-weight: bold;
+        padding: 2px;
+    }
+
+    .pagination {
+        display: flex;
+        justify-content: center;
+    }
+
+    .search-form .input-group {
+        max-width: 500px;
+        width: 100%;
+    }
+
+    .search-input {
+        border-radius: 25px;
+        border: 2px solid #87CEEB;
+        padding: 10px 15px;
+        outline: none;
+        width: 100%;
+    }
+
+    .search-input:focus {
+        border-color: #1E90FF;
+        box-shadow: 0 0 5px rgba(30, 144, 255, 0.5);
+    }
+
+    .search-button:hover {
+        background-color: #2980b9;
+    }
+
+    .filter-nav .dropdown-menu::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .filter-nav .dropdown-menu::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+    }
+
+    .dropdown-menu::-webkit-scrollbar-track {
+        margin-bottom: 20px; /* Adds space below the scrollbar track */
+    }
+
+    .filter-nav .dropdown-menu::-webkit-scrollbar-thumb {
+        background: #6B46C1;
+        border-radius: 4px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .dropdown-menu {
+        max-height: 300px; /* Adjust as needed */
+        overflow-y: auto; /* Add scrollbar if content exceeds max-height */
+        padding-bottom: 10px; /* Add space at the bottom */
+        margin-bottom: 10px; /* Ensure dropdown appears above other elements */
+    }
+
+    .navbar-collapse {
+        overflow: visible !important; /* Prevents clipping */
+    }
+
+    .dropdown {
+        overflow: visible !important; /* Ensure dropdown is not clipped */
+    }
+    /* Enhanced Styles */
+    .table-responsive {
+        scroll-behavior: smooth;
+    }
+
+    .sticky-top {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    .sortable {
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .sortable:hover {
+        background: #e9ecef;
+    }
+
+    .sortable i {
+        margin-left: 8px;
+        opacity: 0.5;
+        transition: opacity 0.3s ease;
+    }
+
+    .sortable:hover i {
+        opacity: 1;
+    }
+
+    .sorted-asc i.fa-sort {
+        display: none;
+    }
+
+    .sorted-asc i.fa-sort-up {
+        display: inline-block;
+    }
+
+    .sorted-desc i.fa-sort {
+        display: none;
+    }
+
+    .sorted-desc i.fa-sort-down {
+        display: inline-block;
+    }
+
+    .btn-filter {
+        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        padding: 10px 25px;
+        box-shadow: 0 4px 15px rgba(76,175,80,0.3);
+    }
+
+    .btn-clear {
+        background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+        padding: 10px 25px;
+        box-shadow: 0 4px 15px rgba(244,67,54,0.3);
+    }
+    /* Main Container */
+    .container-fluid {
+        max-width: 1349px; /* Set the max width to 1349px */
+        margin: 0 auto; /* Center the container */
+        padding: 20px;
+    }
+
+    /* Table Styling */
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+        max-height: 75vh; /* Adjust based on screen height */
+        overflow-y: auto;
+        font-family: 'Poppins', sans-serif; /* Trendy font */
+    }
+
+/* Table Styling */
+    .modern-table {
+        width: 100%;
+        table-layout: auto; /* Auto-adjust column widths */
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 12px; /* Smaller font size */
+        color: #333; /* Soft text color */
+    }
+
+    /* Table Header */
+    .modern-table th {
+        background-color: #3498db;
+        color: white;
+        font-weight: 500;
+        padding: 8px 6px; /* Reduced padding */
+        text-align: left;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+
+    /* Table Body */
+    .modern-table td {
+        padding: 6px; /* Reduced padding */
+        border-bottom: 1px solid #f0f0f0; /* Light border */
+        transition: background-color 0.2s ease; /* Hover effect */
+    }
+
+    /* Column Widths */
+    .modern-table th:nth-child(1),
+    .modern-table td:nth-child(1) {
+        width: 7%; /* RFP# */
+    }
+
+    .modern-table th:nth-child(2),
+    .modern-table td:nth-child(2) {
+        width: 14%; /* SCOPE */
+    }
+
+    .modern-table th:nth-child(3),
+    .modern-table td:nth-child(3) {
+        width: 12%; /* CLIENT */
+    }
+
+    .modern-table th:nth-child(4),
+    .modern-table td:nth-child(4) {
+        width: 9%; /* TENDER ISSUE DATE */
+    }
+
+    .modern-table th:nth-child(5),
+    .modern-table td:nth-child(5) {
+        width: 8%; /* TENDER COST */
+    }
+
+    .modern-table th:nth-child(6),
+    .modern-table td:nth-child(6) {
+        width: 9%; /* CONTRACT PERIOD */
+    }
+
+    .modern-table th:nth-child(7),
+    .modern-table td:nth-child(7) {
+        width: 9%; /* TIME LEFT */
+    }
+
+    .modern-table th:nth-child(8),
+    .modern-table td:nth-child(8) {
+        width: 9%; /* DEADLINE */
+    }
+
+    .modern-table th:nth-child(9),
+    .modern-table td:nth-child(9) {
+        width: 19%; /* COUNTRY */
+    }
+
+    .modern-table th:nth-child(10),
+    .modern-table td:nth-child(10) {
+        width: 10%; /* VISIT WEBSITE */
+    }
+
+    .modern-table th,
+    .modern-table td {
+        padding: 15px;
+        text-align: left;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .modern-table th {
+        background-color: #3498db;
+        color: white;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 14px;
+    }
+
+    .modern-table tbody tr:hover {
+        background-color: #f5f5f5;
+        transition: background-color 0.3s ease;
+    }
+
+    .modern-table tbody tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+
+    .modern-table tbody tr:hover {
+        background-color: #e3f2fd;
+    }
+
+    /* Sticky Header */
+    .modern-table thead {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+
+    /* Pagination Styling */
+    .pagination {
+        margin-top: 20px;
+        display: flex;
+        justify-content: center;
+    }
+
+    .pagination .page-item {
+        margin: 0 5px;
+    }
+
+    .pagination .page-link {
+        border-radius: 6px;
+        padding: 8px 16px;
+        color: #3498db;
+        border: 1px solid #3498db;
+    }
+
+    .pagination .page-item.active .page-link {
+        background-color: #3498db;
+        color: white;
+        border-color: #3498db;
+    }
+
+    .pagination .page-link:hover {
+        background-color: #f5f5f5;
+    }
+
+    /* Highlight Search Terms */
+    .highlight {
+        background-color: #ffeb3b;
+        padding: 2px 4px;
+        border-radius: 4px;
+    }
+
+    /* Dropdown Styling */
+    .dropdown-menu {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .dropdown-item {
+        padding: 8px 16px;
+    }
+
+    .dropdown-item:hover {
+        background-color: #f5f5f5;
+    }
+
+    /* Filter Buttons */
+    .btn-filter {
+        background-color: #3498db;
+        color: white;
+        border-radius: 6px;
+        padding: 8px 16px;
+    }
+
+    .btn-filter:hover {
+        background-color: #2980b9;
+    }
+
+    .btn-clear {
+        background-color: #e74c3c;
+        color: white;
+        border-radius: 6px;
+        padding: 8px 16px;
+    }
+
+    .btn-clear:hover {
+        background-color: #c0392b;
+    }
+
+    /* Flash Message Styling */
+    .custom-alert {
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        border: 1px solid transparent;
+    }
+
+    .alert-info {
+        background-color: #e3f2fd;
+        border-color: #90caf9;
+        color: #0d47a1;
+    }
+
+    .alert-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .alert-header i {
+        font-size: 1.5rem;
+        margin-right: 1rem;
+    }
+
+    .alert-header h4 {
+        margin: 0;
+        font-size: 1.25rem;
+    }
+
+    .filter-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .filter-tag {
+        background: rgba(255,255,255,0.9);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-close {
+        margin-left: auto;
+        padding: 0.5rem;
+    }
+
+    .badge {
+        font-size: 0.9rem;
+        padding: 0.5rem 0.75rem;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+
+    .bg-primary {
+        background-color: #3498db !important;
+    }
+
+    .bg-success {
+        background-color: #2ecc71 !important;
+    }
+
+    .count-badge {
+        background: linear-gradient(145deg, #3498db, #2980b9);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 25px;
+        font-size: 1.1rem;
+        box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+    }
+
+    .count-badge span:not(:last-child)::after {
+        opacity: 0.7;
+        margin: 0 3px;
+    }
+
+    #filteredCount {
+        color: #fefffe;
+        font-weight: bold;
+    }
+
+    #totalCount {
+        color: #f1c40f;
+        font-weight: bold;
+    }
+
+    .custom-alert {
+        position: relative;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        border: 1px solid transparent;
+        transition: opacity 0.5s ease-out;
+        opacity: 1;
+    }
+
+    .custom-alert.fade-out {
+        opacity: 0;
+    }
+
+    .custom-alert .btn-close {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        padding: 0.5rem;
+        background: none;
+        border: none;
+        font-size: 1.25rem;
+        line-height: 1;
+        cursor: pointer;
+        opacity: 0.7;
+        transition: opacity 0.2s ease;
+    }
+
+    .custom-alert .btn-close:hover {
+        opacity: 1;
+    }
+
+    .custom-alert {
+        position: relative;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        border: 1px solid transparent;
+        transition: opacity 0.5s ease-out;
+        opacity: 1;
+    }
+
+    .custom-alert.fade-out {
+        opacity: 0;
+    }
+
+    .custom-alert .btn-close {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        padding: 0.5rem;
+        background: none;
+        border: none;
+        font-size: 1.25rem;
+        line-height: 1;
+        cursor: pointer;
+        opacity: 0.7;
+        transition: opacity 0.2s ease;
+        color: #000; /* Ensure the close icon is visible */
+    }
+
+    .custom-alert .btn-close:hover {
+        opacity: 1;
+        color: #000; /* Ensure the close icon is visible on hover */
+    }
+
+    .alert-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .alert-header i {
+        font-size: 1.5rem;
+        margin-right: 1rem;
+    }
+
+    .alert-header h4 {
+        margin: 0;
+        font-size: 1.25rem;
+    }
+
+    .filter-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .filter-tag {
+        background: rgba(255, 255, 255, 0.9);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .sorting-dropdown {
+        position: relative;
+        display: inline-block;
+        margin-left: 8px;
+    }
+
+    .sorting-toggle {
+        background: none;
+        border: none;
+        padding: 4px;
+        color: #3498db;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .sorting-toggle:hover {
+        color: #2980b9;
+        transform: scale(1.1);
+    }
+
+    .sorting-menu {
+        display: none;
+        position: absolute;
+        right: 0;
+        top: 100%;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        min-width: 200px;
+        z-index: 1000;
+        padding: 8px 0;
+    }
+
+    .sorting-menu.show {
+        display: block;
+        animation: slideIn 0.3s ease;
+    }
+
+    .sort-option {
+        display: flex;
+        align-items: center;
+        padding: 10px 16px;
+        color: #2c3e50;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .sort-option:hover {
+        background: #f8f9fa;
+        padding-left: 20px;
+    }
+
+    .sort-option.active {
+        background: #e3f2fd;
+        color: #3498db;
+        font-weight: 500;
+    }
+
+    .sort-option i {
+        margin-right: 12px;
+        width: 20px;
+        color: #7f8c8d;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Enhanced Pagination with Sorting */
+    .pagination .page-link {
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        border: 1px solid #dee2e6;
+    }
+
+    .pagination .page-link:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(52, 152, 219, 0.2);
+    }
+
+    .pagination .page-item.active .page-link {
+        background: linear-gradient(135deg, #3498db, #2980b9);
+        border-color: #3498db;
+    }
+    
+    /* Style for the Visit Website button */
+    .btn-visit-website {
+        background: linear-gradient(135deg, #4CAF50, #45a049);
+        color: white;
+        border: none;
+        padding: 6px 12px; /* Smaller button */
+        border-radius: 20px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px; /* Smaller font size */
+        font-weight: 500;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-visit-website:hover {
+        background: linear-gradient(135deg, #45a049, #4CAF50);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-visit-website i {
+        font-size: 12px; /* Smaller icon */
+    }
+
+    .sorting-panel {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .sorting-label {
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    .btn-sorting {
+        background: #ffffff;
+        border: 1px solid #dee2e6;
+        color: #2c3e50;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-sorting:hover {
+        background: #e9ecef;
+        border-color: #ced4da;
+    }
+
+    .dropdown-menu {
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+        border: 1px solid #dee2e6;
+    }
+
+    .dropdown-item {
+        padding: 0.5rem 1rem;
+        color: #2c3e50;
+        transition: all 0.3s ease;
+    }
+
+    .dropdown-item:hover {
+        background: #f8f9fa;
+        padding-left: 1.5rem;
+    }
+
+    .dropdown-item.active {
+        background: #e3f2fd;
+        color: #3498db;
+        font-weight: 500;
+    }
+
+    .dropdown-item i {
+        width: 20px;
+        text-align: center;
+        margin-right: 8px;
+    }
+/* Reduced Navigation Bar */
+    .navbar {
+        padding-top: 0.25rem;
+        padding-bottom: 0.25rem;
+    }
+
+    .nav-card .card-body {
+        padding: 0.75rem;
+    }
+
+    .nav-card .card-body i {
+        font-size: 1.25rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .nav-card .card-body h5 {
+        font-size: 0.9rem;
+        margin-bottom: 0;
+    }
+
+    /* Compact Filter Tab */
+/* Filter Navigation */
+    /* Filter Navigation */
+    .filter-nav {
+        padding: 0.5rem 1rem;
+        min-height: 60px; /* Reduced height */
+        border-radius: 8px;
+        margin: 10px 0;
+    }
+
+    .filter-group {
+        margin-bottom: 0;
+        padding: 0.25rem;
+    }
+
+    .filter-group label {
+        font-size: 0.8rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .filter-nav .form-select,
+    .filter-nav .form-range {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+        height: 32px; /* Reduced height */
+    }
+
+    .filter-nav .form-range {
+        margin-top: 0.25rem;
+    }
+
+    /* Flexbox Layout for Filters */
+    .d-flex.flex-wrap {
+        gap: 8px; /* Reduced gap between filters */
+    }
+
+    /* Action Buttons */
+    .btn-filter,
+    .btn-clear {
+        padding: 0.25rem 0.75rem;
+        font-size: 0.8rem;
+        height: 32px; /* Match filter height */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .btn-filter i,
+    .btn-clear i {
+        margin-right: 4px;
+    }
+
+    /* Days Remaining Slider */
+    #daysValue {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 4px 12px;
+        border-radius: 20px;
+        display: inline-block;
+        text-align: center;
+        font-weight: 600;
+        min-width: 60px;
+    }
+
+    /* Dropdown Menu */
+    .dropdown-menu {
+        max-height: 200px;
+        overflow-y: auto;
+        font-size: 0.8rem;
+    }
+
+    .dropdown-item {
+        padding: 0.25rem 0.75rem;
+    }
+
+    /* Dropdown Menu */
+    /* Ensure dropdown menu appears above flash messages */
+    .dropdown-menu {
+        z-index: 1050; /* Higher than the flash message's z-index */
+        position: absolute; /* Ensure it's positioned correctly */
+    }
+
+    /* Flash message styling */
+    .custom-alert {
+        z-index: 1040; /* Lower than the dropdown menu */
+        position: relative; /* Ensure z-index works */
+    }
+
+    /* Ensure parent containers don't clip the dropdown */
+    .filter-nav {
+        overflow: visible !important;
+    }
+
+    /* Ensure dropdown is not clipped */
+    .navbar-collapse {
+        overflow: visible !important;
+    }
+
+    .dropdown {
+        position: relative;
+    }
+
+    /* Slimmer Flash Messages */
+    .custom-alert {
+        padding: 0.5rem 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .alert-header {
+        margin-bottom: 0.5rem;
+    }
+
+    .alert-header i {
+        font-size: 1rem;
+        margin-right: 0.5rem;
+    }
+
+    .alert-header h4 {
+        font-size: 0.9rem;
+    }
+
+    .filter-tags {
+        gap: 0.25rem;
+    }
+
+    .filter-tag {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    .btn-close {
+        padding: 0.25rem;
+        top: 0.25rem;
+        right: 0.25rem;
+    }
+
+    /* Compact Dropdowns */
+    .dropdown-menu {
+        margin-top: 0.25rem;
+    }
+
+    .dropdown-item {
+        padding: 0.25rem 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    /* Slimmer Table Header */
+    .modern-table th {
+        padding: 8px 6px;
+        font-size: 0.8rem;
+    }
+
+    /* Reduced Sorting Panel Height */
+    .sorting-panel {
+        padding: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .sorting-label {
+        font-size: 0.8rem;
+    }
+
+    .btn-sorting {
+        padding: 0.25rem 0.75rem;
+        font-size: 0.8rem;
+    }
+    
+</style>
+
+<script>
+    // Auto-submit duration checkboxes
+    function convertToMonths(contractPeriod) {
+        if (contractPeriod.toLowerCase().includes("day")) {
+            var days = parseInt(contractPeriod.replace(/\D/g, ""));
+            return days / 30;
+        } else if (contractPeriod.toLowerCase().includes("month")) {
+            return parseInt(contractPeriod.replace(/\D/g, ""));
+        } else if (contractPeriod.toLowerCase().includes("year")) {
+            var years = parseInt(contractPeriod.replace(/\D/g, ""));
+            return years * 12;
+        }
+        return 0;
+    }
+
+    // Highlight search terms
+    const searchQuery = "{{ closed_search_query }}";
+    if(searchQuery) {
+        document.querySelectorAll('.modern-table td').forEach(td => {
+            td.innerHTML = td.innerHTML.replace(
+                new RegExp(searchQuery, 'gi'), 
+                match => `<span class="highlight">${match}</span>`
+            );
+        });
+    }
+
+    // Initialize tooltips
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+        new bootstrap.Tooltip(el);
+    });
+
+    function searchRfp(tableId, searchInputId) {
+        var input, filter, table, tr, td, i, txtValue;
+        input = document.getElementById(searchInputId);
+        filter = input.value.toUpperCase();
+        table = document.getElementById(tableId);
+        tr = table.getElementsByTagName("tr");
+
+        for (i = 1; i < tr.length; i++) {
+            td = tr[i].getElementsByTagName("td");
+            let found = false;
+
+            for (let j = 0; j < td.length; j++) {
+                if (td[j]) {
+                    txtValue = td[j].textContent || td[j].innerText;
+                    if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            tr[i].style.display = found ? "" : "none";
+        }
+    }
+
+    $(document).ready(function() {
+        $('.dropdown-toggle').dropdown();
+        $('[data-toggle="tooltip"]').tooltip();
+    });
+
+    function updateTimeLeftOutput(slider) {
+        var output = document.getElementById("time_left_output");
+        output.textContent = slider.value + " days";
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        let searchQuery = "{{ open_search_query }}";
+        if (searchQuery) {
+            let elements = document.querySelectorAll("td");
+            elements.forEach(el => {
+                let regex = new RegExp(searchQuery, "gi");
+                el.innerHTML = el.innerHTML.replace(regex, match => `<span class="highlight">${match}</span>`);
+            });
+        }
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+        let searchQuery = "{{ closed_search_query }}";
+        if (searchQuery) {
+            let elements = document.querySelectorAll("td");
+            elements.forEach(el => {
+                let regex = new RegExp(searchQuery, "gi");
+                el.innerHTML = el.innerHTML.replace(regex, match => `<span class="highlight">${match}</span>`);
+            });
+        }
+    });
+
+    document.getElementById("competitionActivityFilter").addEventListener("change", function () {
+        document.getElementById("filterForm").submit();
+    });
+
+    function updateDaysValue(value) {
+        document.getElementById('daysValue').textContent = value == 365 ? 'All' : value + ' days';
+    }
+    
+    
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelector('input[name="time_left"]').value = 365;
+    });
+
+    document.querySelectorAll('.activity-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const selectedCount = document.querySelectorAll('.activity-checkbox:checked').length;
+            const button = document.querySelector('#activityDropdown');
+            button.textContent = selectedCount ? `${selectedCount} selected` : 'All Types';
+        });
+    });
+    // Save filters to localStorage
+    function saveFilters() {
+        const params = new URLSearchParams();
+
+        // Capture selected countries
+        document.querySelectorAll('.country-checkbox:checked').forEach(checkbox => {
+            params.append('country', checkbox.value);
+        });
+
+        // Capture selected activities (Tender Type)
+        document.querySelectorAll('.activity-checkbox:checked').forEach(checkbox => {
+            params.append('competition_activity', checkbox.value);
+        });
+
+        // Capture selected durations
+        document.querySelectorAll('.duration-checkbox:checked').forEach(checkbox => {
+            params.append('contract_duration', checkbox.value);
+        });
+
+        // Capture time left value
+        const timeLeft = document.querySelector('input[name="time_left"]').value;
+        if (timeLeft && timeLeft !== '365') {
+            params.append('time_left', timeLeft);
+        }
+
+        // Save to localStorage
+        localStorage.setItem('closedRfpFilters', params.toString());
+    }
+
+    // Clear saved filters
+    function clearSavedFilters() {
+        localStorage.removeItem('closedRfpFilters');
+    }
+
+    // Restore filters on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+
+        // Only restore if no filters in URL
+        if (!urlParams.toString()) {
+            const savedFilters = localStorage.getItem('closedRfpFilters');
+            if (savedFilters) {
+                window.location.href = `${window.location.pathname}?${savedFilters}`;
+                return;
+            }
+        }
+
+        // Update form fields from URL parameters
+        updateFormFromURL();
+        updateDropdownTexts();
+    });
+
+    // Update form fields from URL parameters
+    function updateFormFromURL() {
+        const urlParams = new URLSearchParams(window.location.search);
+
+        // Country checkboxes
+        urlParams.getAll('country').forEach(value => {
+            const checkbox = document.querySelector(`.country-checkbox[value="${value}"]`);
+            if (checkbox) checkbox.checked = true;
+        });
+
+        // Activity (Tender Type) checkboxes
+        urlParams.getAll('competition_activity').forEach(value => {
+            const checkbox = document.querySelector(`.activity-checkbox[value="${value}"]`);
+            if (checkbox) checkbox.checked = true;
+        });
+
+        // Duration checkboxes
+        urlParams.getAll('contract_duration').forEach(value => {
+            const checkbox = document.querySelector(`.duration-checkbox[value="${value}"]`);
+            if (checkbox) checkbox.checked = true;
+        });
+
+        // Time left slider
+        const timeLeft = urlParams.get('time_left') || 365;
+        document.querySelector('input[name="time_left"]').value = timeLeft;
+        updateDaysValue(timeLeft);
+    }
+
+    // Update dropdown button texts
+    function updateDropdownTexts() {
+        // Country
+        const countryCount = document.querySelectorAll('.country-checkbox:checked').length;
+        document.getElementById('countryDropdownButton').textContent = 
+            countryCount ? `${countryCount} selected` : 'All Countries';
+
+        // Activity (Tender Type)
+        const activityCount = document.querySelectorAll('.activity-checkbox:checked').length;
+        document.getElementById('activityDropdownButton').textContent = 
+            activityCount ? `${activityCount} selected` : 'All Types';
+
+        // Duration
+        const durationCount = document.querySelectorAll('.duration-checkbox:checked').length;
+        document.getElementById('durationDropdownButton').textContent = 
+            durationCount ? `${durationCount} selected` : 'Select Duration';
+    }
+
+    // Days remaining slider update
+    function updateDaysValue(value) {
+        document.getElementById('daysValue').textContent = 
+            value === '365' ? 'All' : `${value} days`;
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const sortField = "{{ sort_field }}";
+        const sortOrder = "{{ sort_order }}";
+
+        document.querySelectorAll('.dropdown-item').forEach(item => {
+            const href = item.getAttribute('href');
+            if (href.includes(`sort=${sortField}`) && href.includes(`order=${sortOrder}`)) {
+                item.classList.add('active');
+            }
+        });
+    });
+
+
+    // Close menus when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.sorting-dropdown')) {
+            document.querySelectorAll('.sorting-menu').forEach(menu => {
+                menu.classList.remove('show');
+            });
+        }
+    });
+
+    // Update pagination links with sorting parameters
+    document.querySelectorAll('.pagination a').forEach(link => {
+        const url = new URL(link.href);
+        url.searchParams.set('sort', '{{ sort_field }}');
+        url.searchParams.set('order', '{{ sort_order }}');
+        link.href = url.toString();
+    });
+
+    // Function to update the filtered RFP count
+    function updateFilteredRfpCount() {
+        const visibleRows = document.querySelectorAll('.modern-table tbody tr:not([style*="display: none"])').length;
+        document.getElementById('filteredRfpCount').textContent = visibleRows;
+    }
+
+    // Update counts when filters are applied
+    document.querySelectorAll('.country-checkbox, .activity-checkbox, .duration-checkbox, input[name="time_left"]').forEach(element => {
+        element.addEventListener('change', () => {
+            setTimeout(() => {
+                updateFilteredRfpCount();
+            }, 100); // Small delay to allow the table to update
+        });
+    });
+
+    // Update counts on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const flashMessages = document.querySelectorAll('.custom-alert');
+        
+        flashMessages.forEach(alert => {
+            // Auto-hide after 2 seconds
+            const fadeOutTimer = setTimeout(() => {
+                alert.classList.add('fade-out');
+                
+                // Remove element after fade out completes
+                setTimeout(() => {
+                    alert.remove();
+                }, 500); // Matches the CSS transition duration
+            }, 2000);
+
+            // Close button functionality
+            const closeButton = alert.querySelector('.btn-close');
+            if (closeButton) {
+                closeButton.addEventListener('click', () => {
+                    // Clear the auto-hide timer
+                    clearTimeout(fadeOutTimer);
+                    
+                    // Fade out and remove
+                    alert.classList.add('fade-out');
+                    setTimeout(() => {
+                        alert.remove();
+                    }, 500);
+                });
+            }
+        });
+    });
+    document.addEventListener('DOMContentLoaded', function() {
+        // Ensure dropdowns are not hidden by other elements
+        document.querySelectorAll('.dropdown-toggle').forEach(function(dropdownToggle) {
+            dropdownToggle.addEventListener('click', function() {
+                const dropdownMenu = this.nextElementSibling;
+                if (dropdownMenu && dropdownMenu.classList.contains('dropdown-menu')) {
+                    dropdownMenu.style.zIndex = '1050'; // Ensure it's above other elements
+                }
+            });
+        });
+    });
+    document.addEventListener('DOMContentLoaded', function() {
+    // Initialize dropdowns
+        var dropdowns = [].slice.call(document.querySelectorAll('.dropdown-toggle'));
+        dropdowns.forEach(function(dropdownToggle) {
+            new bootstrap.Dropdown(dropdownToggle);
+        });
+
+        // Update form from URL parameters
+        updateFormFromURL();
+        updateDropdownTexts();
+
+        // Add event listeners for checkboxes
+        document.querySelectorAll('.country-checkbox, .activity-checkbox, .duration-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', updateDropdownTexts);
+        });
+    });
+
+    function updateDropdownTexts() {
+        // Country
+        const countryCount = document.querySelectorAll('.country-checkbox:checked').length;
+        document.getElementById('countryDropdownButton').textContent = 
+            countryCount ? `${countryCount} selected` : 'All Countries';
+
+        // Activity
+        const activityCount = document.querySelectorAll('.activity-checkbox:checked').length;
+        document.getElementById('activityDropdownButton').textContent = 
+            activityCount ? `${activityCount} selected` : 'All Types';
+
+        // Duration
+        const durationCount = document.querySelectorAll('.duration-checkbox:checked').length;
+        document.getElementById('durationDropdownButton').textContent = 
+            durationCount ? `${durationCount} selected` : 'Select Duration';
+    }
+
+    function updateFormFromURL() {
+        const urlParams = new URLSearchParams(window.location.search);
+
+        // Country checkboxes
+        urlParams.getAll('country').forEach(value => {
+            const checkbox = document.querySelector(`.country-checkbox[value="${value}"]`);
+            if(checkbox) checkbox.checked = true;
+        });
+
+        // Activity checkboxes
+        urlParams.getAll('competition_activity').forEach(value => {
+            const checkbox = document.querySelector(`.activity-checkbox[value="${value}"]`);
+            if(checkbox) checkbox.checked = true;
+        });
+
+        // Duration checkboxes
+        urlParams.getAll('contract_duration').forEach(value => {
+            const checkbox = document.querySelector(`.duration-checkbox[value="${value}"]`);
+            if(checkbox) checkbox.checked = true;
+        });
+
+        // Awarded date range
+        const awardedRange = urlParams.get('awarded_date_range');
+        if (awardedRange) {
+            document.querySelector('select[name="awarded_date_range"]').value = awardedRange;
+        }
+    }
+</script>
+{% endblock %}

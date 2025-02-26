@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICS Tenders Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2A2A72;
+            --secondary-color: #009FFD;
+            --accent-color: #FF0076;
+        }
+
+        body {
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            min-height: 100vh;
+            overflow-x: hidden;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .particle-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        .portal-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease;
+        }
+
+        .portal-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stats-card {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1rem;
+            min-height: 200px;
+            transition: transform 0.3s ease;
+        }
+
+        .stats-card:hover {
+            transform: scale(1.03);
+        }
+
+        .rfp-badge {
+            font-size: 1.1rem;
+            font-weight: 600;
+            padding: 0.6rem 1.2rem;
+            background: var(--accent-color);
+            color: white;
+            border-radius: 25px;
+        }
+
+        .total-rfp-label {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            letter-spacing: 1px;
+        }
+
+        .interactive-card {
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .interactive-card:before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: rotate(45deg);
+            transition: all 0.5s ease;
+        }
+
+        .interactive-card:hover:before {
+            animation: shine 1.5s;
+        }
+
+        @keyframes shine {
+            0% { left: -50%; }
+            100% { left: 150%; }
+        }
+
+        :root {
+            --primary-color: #2A2A72;
+            --secondary-color: #009FFD;
+            --accent-color: #FF0076;
+            --success-color: #00C851;
+            --warning-color: #ffbb33;
+            --info-color: #33b5e5;
+        }
+
+        body {
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            min-height: 100vh;
+            overflow-x: hidden;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .portal-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease;
+            padding: 2rem;
+        }
+
+        .stats-card {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1rem;
+            min-height: 200px;
+            transition: transform 0.3s ease;
+        }
+
+        .dashboard-section {
+            margin-top: 2rem;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+        }
+
+        .feature-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .animated-card {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .total-rfp-card {
+            background: linear-gradient(135deg, #2A2A72, #009FFD);
+            color: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 1rem;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .total-rfp-number {
+            font-size: 4rem;
+            font-weight: 700;
+            margin: 1rem 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+
+        .navbar {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--primary-color) !important;
+        }
+
+        .nav-link {
+            font-weight: 500;
+            margin: 0 0.5rem;
+            color: var(--primary-color) !important;
+        }
+
+        .nav-link:hover {
+            color: var(--secondary-color) !important;
+        }
+
+        .dashboard-highlight {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 2rem;
+            border-radius: 15px;
+            margin: 2rem 0;
+        }
+
+        .dashboard-highlight h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        .dashboard-highlight p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .info-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .info-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-file-contract me-2"></i>ICS Tenders Portal
+            </a>
+            <div class="d-flex align-items-center">
+                <a href="{{ url_for('landing') }}" class="nav-link">Dashboard</a>
+                <a href="{{ url_for('profile') }}" class="nav-link">Profile</a>
+                <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container" style="margin-top: 80px;">
+        <div class="portal-card">
+            <h1 class="text-center mb-4 display-4 fw-bold text-gradient">Welcome to ICS Tenders Portal</h1>
+            
+            <!-- Total RFPs Card -->
+            <div class="row justify-content-center mb-4">
+                <div class="col-md-8">
+                    <div class="total-rfp-card interactive-card animated-card">
+                        <div class="total-rfp-label">TOTAL RFPs</div>
+                        <div class="display-3 fw-bold mt-3">{{ total_rfp_count }}</div>
+                        <div class="rfp-badge mt-2">SAR {{ total_rfp_value|millify }} Total Value</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Open and Closed RFPs Cards -->
+            <div class="row mt-4">
+                <div class="col-md-6 mb-4">
+                    <a href="{{ url_for('open_rfps') }}" class="text-decoration-none">
+                        <div class="stats-card interactive-card">
+                            <h4><i class="fas fa-folder-open me-2"></i>Open RFPs</h4>
+                            <h2 class="display-3 fw-bold mt-3">{{ open_rfp_count }}</h2>
+                            <div class="rfp-badge mt-3">SAR {{ open_rfp_value|millify }}</div>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-md-6 mb-4">
+                    <a href="{{ url_for('closed_rfps') }}" class="text-decoration-none">
+                        <div class="stats-card interactive-card">
+                            <h4><i class="fas fa-archive me-2"></i>Closed RFPs</h4>
+                            <h2 class="display-3 fw-bold mt-3">{{ closed_rfp_count }}</h2>
+                            <div class="rfp-badge mt-3">SAR {{ closed_rfp_value|millify }}</div>
+                        </div>
+                    </a>
+                </div>
+            <!-- Dashboard Highlights -->
+            <div class="dashboard-highlight">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h2>Streamline Your Tender Process</h2>
+                        <p>Access real-time tender information, track deadlines, and manage submissions efficiently.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h2>Comprehensive Analytics</h2>
+                        <p>Gain insights into tender performance, success rates, and market trends.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-section ">
+                <h2 class="text-center mb-4">Key Insights</h2>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="feature-card">
+                            <i class="fas fa-percent fa-3x mb-3 text-success"></i>
+                            <h4>Success Rate</h4>
+                            <p>{{ success_rate }}% of tenders are successfully awarded.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="feature-card">
+                            <i class="fas fa-users fa-3x mb-3 text-info"></i>
+                            <h4>Repeat Clients</h4>
+                            <p>{{ repeat_clients }} clients have awarded multiple tenders.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="feature-card">
+                            <i class="fas fa-coins fa-3x mb-3 text-warning"></i>
+                            <h4>Average Tender Value</h4>
+                            <p>SAR {{ avg_tender_value|millify }} average value per tender.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features Section -->
+            <div class="dashboard-section">
+                <h2 class="text-center mb-4">Key Features</h2>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="feature-card">
+                            <i class="fas fa-search fa-3x mb-3 text-primary"></i>
+                            <h4>Advanced Search</h4>
+                            <p>Filter tenders by category, value, and deadline with precision.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="feature-card">
+                            <i class="fas fa-bell fa-3x mb-3 text-warning"></i>
+                            <h4>Real-time Alerts</h4>
+                            <p>Get instant notifications for new tenders and deadline reminders.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="feature-card">
+                            <i class="fas fa-chart-line fa-3x mb-3 text-success"></i>
+                            <h4>Performance Analytics</h4>
+                            <p>Track your tender success rate and market performance.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Add particle background effect
+        function createParticles() {
+            const container = document.querySelector('.particle-background');
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.style.position = 'absolute';
+                particle.style.width = '2px';
+                particle.style.height = '2px';
+                particle.style.background = 'rgba(255,255,255,0.5)';
+                particle.style.borderRadius = '50%';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.animation = `float ${5 + Math.random() * 10}s infinite`;
+                container.appendChild(particle);
+            }
+        }
+        createParticles();
+        ScrollReveal().reveal('.scroll-animation', {
+            delay: 300,
+            distance: '50px',
+            origin: 'bottom',
+            easing: 'ease-in-out',
+        });
+
+    </script>
+</body>
+</html>
+

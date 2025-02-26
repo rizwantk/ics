@@ -1,0 +1,187 @@
+{% extends "layout.html" %}
+
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+    }
+    
+    .profile-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        backdrop-filter: blur(10px);
+        overflow: hidden;
+    }
+
+    .profile-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem;
+        color: white;
+        text-align: center;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-control {
+        height: 50px;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 0 15px;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .input-icon {
+        position: relative;
+    }
+
+    .input-icon i {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #a0aec0;
+        z-index: 2;
+    }
+
+    .input-icon input {
+        padding-left: 45px;
+    }
+
+    .btn-gradient {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        height: 50px;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-gradient:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .account-details {
+        background: rgba(245, 247, 250, 0.9);
+        border-radius: 15px;
+        padding: 1.5rem;
+    }
+
+    .list-group-item {
+        background: transparent;
+        border-color: rgba(0, 0, 0, 0.05);
+    }
+</style>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="profile-card">
+                <div class="profile-header">
+                    <h3 class="mb-3">{{ user.name }}</h3>
+                    <p class="mb-0">{{ user.email }}</p>
+                </div>
+
+                <div class="p-4">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show">
+                                    {{ message }}
+                                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST">
+                        <div class="form-group input-icon">
+                            <i class="fas fa-user"></i>
+                            <input type="text" class="form-control" name="name" 
+                                   value="{{ user.name }}" required>
+                        </div>
+
+                        <div class="form-group input-icon">
+                            <i class="fas fa-mobile-alt"></i>
+                            <input type="tel" class="form-control" name="mobile"
+                                   value="{{ user.mobile }}" pattern="[0-9]{10}" required>
+                            <small class="form-text text-muted">10-digit number without spaces</small>
+                        </div>
+
+                        <div class="form-group input-icon">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" class="form-control" name="email"
+                                   value="{{ user.email }}" required>
+                        </div>
+
+                        <div class="form-group input-icon">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" class="form-control" name="new_password"
+                                   placeholder="New password (leave blank to keep current)">
+                        </div>
+
+                        <div class="form-group input-icon">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" class="form-control" name="confirm_password"
+                                   placeholder="Confirm new password">
+                        </div>
+
+                        <button type="submit" class="btn btn-gradient btn-block">
+                            Update Profile
+                        </button>
+                    </form>
+
+                    <div class="account-details mt-5">
+                        <h5 class="mb-4">Account Details</h5>
+                        <ul class="list-group">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>Registered Date</span>
+                                <span class="text-muted">{{ user.registered_on.strftime('%Y-%m-%d %H:%M') }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>Last Login</span>
+                                <span class="text-muted">
+                                    {% if user.last_login %}
+                                        {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}
+                                    {% else %}
+                                        Never logged in
+                                    {% endif %}
+                                </span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<script>
+    // Auto-hide flash messages after 5 seconds
+    setTimeout(() => {
+        document.querySelectorAll('.alert').forEach(alert => {
+            alert.style.transition = 'opacity 0.5s';
+            alert.style.opacity = '0';
+            setTimeout(() => alert.remove(), 500);
+        });
+    }, 5000);
+</script>
+
+{% endblock %}
